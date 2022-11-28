@@ -132,6 +132,7 @@ def main_worker(gpu, args):
         model.load_state_dict(ckpt['model'])
         optimizer.load_state_dict(ckpt['optimizer'])
     else:
+        print("===>train from 0")
         start_epoch = 0
 
     dataset = torchvision.datasets.ImageFolder(os.path.join(args.data, "train"), Transform())
