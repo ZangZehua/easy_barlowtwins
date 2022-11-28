@@ -70,8 +70,8 @@ def parse_args():
         os.makedirs(save_path_base)
         args.save_path_base = save_path_base
 
-    args.print_save_list = list(range(100, args.epochs, 100))
-    args.print_save_list.extend(list(range(args.epochs - 90, args.epochs, 10)))
+    args.save_list = list(range(100, args.epochs, 100))
+    args.save_list.extend(list(range(args.epochs - 90, args.epochs, 10)))
 
     return args
 
@@ -136,6 +136,8 @@ def main_worker(gpu, args):
         start_epoch = 0
 
     dataset = torchvision.datasets.ImageFolder(os.path.join(args.data, "unlabeled"), Transform())
+    if args.rank == 0:
+        print("===>n samples", len(dataset))
     sampler = torch.utils.data.distributed.DistributedSampler(dataset)
     assert args.batch_size % args.world_size == 0
     per_device_batch_size = args.batch_size // args.world_size
@@ -157,7 +159,7 @@ def main_worker(gpu, args):
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
-            if step in args.print_save_list:
+            if step % args.print_freq == 0:
                 if args.rank == 0:
                     # stats = dict(epoch=epoch, step=step,
                     #              lr_weights=optimizer.param_groups[0]['lr'],
@@ -166,7 +168,7 @@ def main_worker(gpu, args):
                     #              time=int(time.time() - start_time))
                     print("epoch:{}, step:{}, lr_w:{}, lr_b:{}, loss:{}, time:{}".format(
                            epoch, step, optimizer.param_groups[0]['lr'], optimizer.param_groups[1]['lr'], loss.item(), int(time.time() - start_time)))
-        if args.rank == 0 and epoch in args.print_save_list:
+        if args.rank == 0 and epoch in args.save_list:
             # save checkpoint
             state = dict(epoch=epoch + 1, model=model.state_dict(),
                          optimizer=optimizer.state_dict())
