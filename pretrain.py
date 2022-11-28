@@ -135,7 +135,7 @@ def main_worker(gpu, args):
         print("===>train from 0")
         start_epoch = 0
 
-    dataset = torchvision.datasets.ImageFolder(os.path.join(args.data, "train"), Transform())
+    dataset = torchvision.datasets.ImageFolder(os.path.join(args.data, "unlabeled"), Transform())
     sampler = torch.utils.data.distributed.DistributedSampler(dataset)
     assert args.batch_size % args.world_size == 0
     per_device_batch_size = args.batch_size // args.world_size
