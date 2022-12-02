@@ -81,8 +81,8 @@ def parse_args():
         os.makedirs(args.save_path)
     if not os.path.isdir(args.tb_path):
         os.makedirs(args.tb_path)
-    if not os.path.isdir(args.data_folder):
-        raise ValueError('data path not exist: {}'.format(args.data_folder))
+    if not os.path.isdir(args.data):
+        raise ValueError('data path not exist: {}'.format(args.data))
 
     return args
 
