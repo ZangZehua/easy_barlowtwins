@@ -75,6 +75,7 @@ def parse_args():
     save_path_base = os.path.join("saved", args.pre)
     args.model_path = os.path.join(save_path_base, args.model_path)
     args.tb_path = os.path.join(save_path_base, args.tb_path)
+    args.pretrained = os.path.join(save_path_base, "models_pt/ckpt_" + args.model + ".pth")
 
     if not os.path.isdir(args.model_path):
         os.makedirs(args.model_path)
