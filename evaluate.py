@@ -3,53 +3,91 @@
 #
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-
-from pathlib import Path
-import argparse
-import json
 import os
-import random
-import signal
 import sys
 import time
+import json
 import urllib
+import random
+import signal
+import argparse
 
 from torch import nn, optim
 from torchvision import models, datasets, transforms
 import torch
 import torchvision
 
-parser = argparse.ArgumentParser(description='Evaluate resnet50 features on ImageNet')
-parser.add_argument('data', type=Path, metavar='DIR',
-                    help='path to dataset')
-parser.add_argument('pretrained', type=Path, metavar='FILE',
-                    help='path to pretrained model')
-parser.add_argument('--weights', default='freeze', type=str,
-                    choices=('finetune', 'freeze'),
-                    help='finetune or freeze resnet weights')
-parser.add_argument('--train-percent', default=100, type=int,
-                    choices=(100, 10, 1),
-                    help='size of traing set in percent')
-parser.add_argument('--workers', default=8, type=int, metavar='N',
-                    help='number of data loader workers')
-parser.add_argument('--epochs', default=100, type=int, metavar='N',
-                    help='number of total epochs to run')
-parser.add_argument('--batch-size', default=256, type=int, metavar='N',
-                    help='mini-batch size')
-parser.add_argument('--lr-backbone', default=0.0, type=float, metavar='LR',
-                    help='backbone base learning rate')
-parser.add_argument('--lr-classifier', default=0.3, type=float, metavar='LR',
-                    help='classifier base learning rate')
-parser.add_argument('--weight-decay', default=1e-6, type=float, metavar='W',
-                    help='weight decay')
-parser.add_argument('--print-freq', default=100, type=int, metavar='N',
-                    help='print frequency')
-parser.add_argument('--checkpoint-dir', default='./checkpoint/lincls/', type=Path,
-                    metavar='DIR', help='path to checkpoint directory')
+
+def parse_args():
+
+    parser = argparse.ArgumentParser(description='Evaluate resnet50 features on ImageNet')
+    parser.add_argument('--data', type=str, metavar='DIR', default='/data/zzh/data',
+                        help='path to dataset')
+    parser.add_argument("--set", type=str, choices=['stl10', 'cifar10', 'cifar100', 'tiny'], default='stl10',
+                        help='dataset')
+    parser.add_argument('--pre', type=str, metavar='FILE', default=None,
+                        help='path to pretrained model')
+    parser.add_argument('--weights', type=str, default='freeze',
+                        choices=('finetune', 'freeze'),
+                        help='finetune or freeze resnet weights')
+    parser.add_argument('--train_percent', type=int, default=100,
+                        choices=(100, 10, 1),
+                        help='size of traing set in percent')
+    parser.add_argument('--workers', type=int, metavar='N', default=8,
+                        help='number of data loader workers')
+    parser.add_argument('--epochs', type=int, metavar='N', default=100,
+                        help='number of total epochs to run')
+    parser.add_argument('--batch_size', type=int, metavar='N', default=256,
+                        help='mini-batch size')
+    parser.add_argument('--lr_backbone', type=float, metavar='LR', default=0.0,
+                        help='backbone base learning rate')
+    parser.add_argument('--lr_classifier', type=float, metavar='LR', default=0.3,
+                        help='classifier base learning rate')
+    parser.add_argument('--weight_decay', type=float, metavar='W', default=1e-6,
+                        help='weight decay')
+    parser.add_argument('--print_freq', type=int, metavar='N', default=100,
+                        help='print frequency')
+    parser.add_argument('--resume', type=str, default=None,
+                        metavar='DIR', help='path to checkpoint directory')
+    parser.add_argument('--model', type=str, default=None,
+                        help='the model to test')
+    parser.add_argument('--models', type=str, default="100, 1000, 100",
+                        help='the models to test')
+    parser.add_argument('--save_folder', type=str, default="models_lp",
+                        help='path to save model')
+    parser.add_argument('--tb_folder', type=str, default="runs_lp",
+                        help='path to tensorboard')
+    args = parser.parse_args()
+
+    if args.set == "stl10":
+        args.data = os.path.join(args.data, "STL-10")
+    elif args.set == "cifar10":
+        args.data = os.path.join(args.data, "CIFAR-10")
+    elif args.set == "cifar100":
+        args.data = os.path.join(args.data, "CIFAR-100")
+    elif args.set == "tiny":
+        args.data = os.path.join(args.data, "tiny-imagenet-200")
+    elif args.set == "imagenet":
+        args.data = os.path.join(args.data, "imagenet")
+    else:
+        raise FileNotFoundError
+
+    save_path_base = os.path.join("saved", args.pre)
+    args.model_path = os.path.join(save_path_base, args.model_path)
+    args.tb_path = os.path.join(save_path_base, args.tb_path)
+
+    if not os.path.isdir(args.model_path):
+        os.makedirs(args.model_path)
+    if not os.path.isdir(args.tb_path):
+        os.makedirs(args.tb_path)
+    if not os.path.isdir(args.data_folder):
+        raise ValueError('data path not exist: {}'.format(args.data_folder))
+
+    return args
 
 
 def main():
-    args = parser.parse_args()
+    args = parse_args()
     if args.train_percent in {1, 10}:
         args.train_files = urllib.request.urlopen(f'https://raw.githubusercontent.com/google-research/simclr/master/imagenet_subsets/{args.train_percent}percent.txt').readlines()
     args.ngpus_per_node = torch.cuda.device_count()
@@ -68,12 +106,6 @@ def main_worker(gpu, args):
     torch.distributed.init_process_group(
         backend='nccl', init_method=args.dist_url,
         world_size=args.world_size, rank=args.rank)
-
-    if args.rank == 0:
-        args.checkpoint_dir.mkdir(parents=True, exist_ok=True)
-        stats_file = open(args.checkpoint_dir / 'stats.txt', 'a', buffering=1)
-        print(' '.join(sys.argv))
-        print(' '.join(sys.argv), file=stats_file)
 
     torch.cuda.set_device(gpu)
     torch.backends.cudnn.benchmark = True
@@ -104,9 +136,8 @@ def main_worker(gpu, args):
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs)
 
     # automatically resume from checkpoint if it exists
-    if (args.checkpoint_dir / 'checkpoint.pth').is_file():
-        ckpt = torch.load(args.checkpoint_dir / 'checkpoint.pth',
-                          map_location='cpu')
+    if args.resume.is_file():
+        ckpt = torch.load(args.resume, map_location='cpu')
         start_epoch = ckpt['epoch']
         best_acc = ckpt['best_acc']
         model.load_state_dict(ckpt['model'])
@@ -118,7 +149,7 @@ def main_worker(gpu, args):
 
     # Data loading code
     traindir = args.data / 'train'
-    valdir = args.data / 'val'
+    valdir = args.data / 'test'
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
 
@@ -173,8 +204,6 @@ def main_worker(gpu, args):
                     stats = dict(epoch=epoch, step=step, lr_backbone=lr_backbone,
                                  lr_classifier=lr_classifier, loss=loss.item(),
                                  time=int(time.time() - start_time))
-                    print(json.dumps(stats))
-                    print(json.dumps(stats), file=stats_file)
 
         # evaluate
         model.eval()
@@ -190,8 +219,6 @@ def main_worker(gpu, args):
             best_acc.top1 = max(best_acc.top1, top1.avg)
             best_acc.top5 = max(best_acc.top5, top5.avg)
             stats = dict(epoch=epoch, acc1=top1.avg, acc5=top5.avg, best_acc1=best_acc.top1, best_acc5=best_acc.top5)
-            print(json.dumps(stats))
-            print(json.dumps(stats), file=stats_file)
 
         # sanity check
         if args.weights == 'freeze':
@@ -205,7 +232,7 @@ def main_worker(gpu, args):
             state = dict(
                 epoch=epoch + 1, best_acc=best_acc, model=model.state_dict(),
                 optimizer=optimizer.state_dict(), scheduler=scheduler.state_dict())
-            torch.save(state, args.checkpoint_dir / 'checkpoint.pth')
+            torch.save(state, os.path.join(args.save_path_base, "ds_ckpt_" + args.epochs + ".pth"))
 
 
 def handle_sigusr1(signum, frame):

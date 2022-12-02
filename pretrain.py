@@ -1,5 +1,4 @@
 import os
-import json
 import math
 import time
 import random
@@ -22,15 +21,15 @@ def parse_args():
                         help='path to dataset')
     parser.add_argument("--set", type=str, choices=['stl10', 'cifar10', 'cifar100', 'tiny'], default='stl10',
                         help='dataset')
-    parser.add_argument('--worker', type=int, metavar='N', default=8,
+    parser.add_argument('--workers', type=int, metavar='N', default=8,
                         help='number of data loader workers')
-    parser.add_argument('--epoch', type=int, metavar='N', default=1000,
+    parser.add_argument('--epochs', type=int, metavar='N', default=1000,
                         help='number of total epochs to run')
     parser.add_argument('--batch_size', type=int, metavar='N', default=256,
                         help='mini-batch size')
-    parser.add_argument('--learning_rate_weight', type=float, metavar='LR', default=0.2,
+    parser.add_argument('--learning_rate_weights', type=float, metavar='LR', default=0.2,
                         help='base learning rate for weights')
-    parser.add_argument('--learning_rate_biase', type=float, metavar='LR', default=0.0048,
+    parser.add_argument('--learning_rate_biases', type=float, metavar='LR', default=0.0048,
                         help='base learning rate for biases and batch norm parameters')
     parser.add_argument('--weight-decay', type=float, metavar='W', default=1e-6,
                         help='weight decay')
@@ -44,6 +43,10 @@ def parse_args():
                         help='print frequency')
     parser.add_argument('--resume', type=str, default=None,
                         metavar='DIR', help='path to checkpoint directory')
+    parser.add_argument('--model_path', type=str, default="models_pt",
+                        help='path to save model')
+    parser.add_argument('--tb_path', type=str, default="runs_pt",
+                        help='path to tensorboard')
     args = parser.parse_args()
 
     pretrain_time = str(datetime.datetime.now().replace(microsecond=0).strftime("%Y%m%d-%H%M"))
@@ -66,12 +69,22 @@ def parse_args():
         args.data = os.path.join(args.data, "imagenet")
     else:
         raise FileNotFoundError
-    if not os.path.isdir(save_path_base):
-        os.makedirs(save_path_base)
-        args.save_path_base = save_path_base
+
+    args.model_path = os.path.join(save_path_base, args.model_path)
+    args.tb_path = os.path.join(save_path_base, args.tb_path)
 
     args.save_list = list(range(100, args.epochs, 100))
     args.save_list.extend(list(range(args.epochs - 90, args.epochs, 10)))
+
+    if not os.path.isdir(save_path_base):
+        os.makedirs(save_path_base)
+        args.save_path_base = save_path_base
+    if not os.path.isdir(args.model_path):
+        os.makedirs(args.model_path)
+    if not os.path.isdir(args.tb_path):
+        os.makedirs(args.tb_path)
+    if not os.path.isdir(args.data_folder):
+        raise ValueError('data path not exist: {}'.format(args.data_folder))
 
     return args
 
@@ -177,7 +190,7 @@ def main_worker(gpu, args):
             torch.save(state, save_path)
     if args.rank == 0:
         # save final model
-        state = dict(epoch=args.epoch + 1, model=model.state_dict(),
+        state = dict(epoch=args.epochs + 1, model=model.state_dict(),
                      optimizer=optimizer.state_dict())
         save_path = os.path.join(args.save_path_base, "ckpt_" + str(args.epoch) + ".pth")
         print("===>saving", save_path)
