@@ -53,9 +53,9 @@ def parse_args():
                         help='the model to test')
     parser.add_argument('--models', type=str, default="100, 1000, 100",
                         help='the models to test')
-    parser.add_argument('--save_folder', type=str, default="models_lp",
+    parser.add_argument('--save_path', type=str, default="models_lp",
                         help='path to save model')
-    parser.add_argument('--tb_folder', type=str, default="runs_lp",
+    parser.add_argument('--tb_path', type=str, default="runs_lp",
                         help='path to tensorboard')
     args = parser.parse_args()
 
@@ -73,12 +73,12 @@ def parse_args():
         raise FileNotFoundError
 
     save_path_base = os.path.join("saved", args.pre)
-    args.save_folder = os.path.join(save_path_base, args.save_folder)
+    args.save_path = os.path.join(save_path_base, args.save_path)
     args.tb_path = os.path.join(save_path_base, args.tb_path)
     args.pretrained = os.path.join(save_path_base, "models_pt/ckpt_" + args.model + ".pth")
 
-    if not os.path.isdir(args.model_path):
-        os.makedirs(args.model_path)
+    if not os.path.isdir(args.save_path):
+        os.makedirs(args.save_path)
     if not os.path.isdir(args.tb_path):
         os.makedirs(args.tb_path)
     if not os.path.isdir(args.data_folder):
@@ -233,7 +233,7 @@ def main_worker(gpu, args):
             state = dict(
                 epoch=epoch + 1, best_acc=best_acc, model=model.state_dict(),
                 optimizer=optimizer.state_dict(), scheduler=scheduler.state_dict())
-            torch.save(state, os.path.join(args.save_path_base, "ds_ckpt_" + args.epochs + ".pth"))
+            torch.save(state, os.path.join(args.save_path, "ds_ckpt_" + args.epochs + ".pth"))
 
 
 def handle_sigusr1(signum, frame):
