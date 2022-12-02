@@ -22,15 +22,15 @@ def parse_args():
                         help='path to dataset')
     parser.add_argument("--set", type=str, choices=['stl10', 'cifar10', 'cifar100', 'tiny'], default='stl10',
                         help='dataset')
-    parser.add_argument('--workers', type=int, metavar='N', default=8,
+    parser.add_argument('--worker', type=int, metavar='N', default=8,
                         help='number of data loader workers')
-    parser.add_argument('--epochs', type=int, metavar='N', default=1000,
+    parser.add_argument('--epoch', type=int, metavar='N', default=1000,
                         help='number of total epochs to run')
     parser.add_argument('--batch_size', type=int, metavar='N', default=256,
                         help='mini-batch size')
-    parser.add_argument('--learning_rate_weights', type=float, metavar='LR', default=0.2,
+    parser.add_argument('--learning_rate_weight', type=float, metavar='LR', default=0.2,
                         help='base learning rate for weights')
-    parser.add_argument('--learning_rate_biases', type=float, metavar='LR', default=0.0048,
+    parser.add_argument('--learning_rate_biase', type=float, metavar='LR', default=0.0048,
                         help='base learning rate for biases and batch norm parameters')
     parser.add_argument('--weight-decay', type=float, metavar='W', default=1e-6,
                         help='weight decay')
