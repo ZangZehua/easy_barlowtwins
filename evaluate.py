@@ -111,7 +111,7 @@ def main_worker(gpu, args):
     torch.backends.cudnn.benchmark = True
 
     model = models.resnet50().cuda(gpu)
-    state_dict = torch.load(args.pretrained, map_location='cpu')
+    state_dict = torch.load(args.pre, map_location='cpu')
     missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
     assert missing_keys == ['fc.weight', 'fc.bias'] and unexpected_keys == []
     model.fc.weight.data.normal_(mean=0.0, std=0.01)
