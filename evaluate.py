@@ -73,7 +73,7 @@ def parse_args():
         raise FileNotFoundError
 
     save_path_base = os.path.join("saved", args.pre)
-    args.model_path = os.path.join(save_path_base, args.model_path)
+    args.save_folder = os.path.join(save_path_base, args.save_folder)
     args.tb_path = os.path.join(save_path_base, args.tb_path)
     args.pretrained = os.path.join(save_path_base, "models_pt/ckpt_" + args.model + ".pth")
 
